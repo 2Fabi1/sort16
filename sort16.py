@@ -29,6 +29,8 @@ button_pressed = False
 game_won = False
 records = [None] * 29  # lengths 8..36
 
+gold_times = [15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75, 80, 85, 90, 95, 100, 105, 110, 115, 120, 125, 130, 135, 140, 145, 150, 155]  # example gold times for lengths 8..36
+
 def generate_and_store_key(path=KEY_FILE):
     key = Fernet.generate_key()
     # write key file with restrictive permissions
@@ -105,12 +107,22 @@ label2.pack()
 label3 = tk.Label(root, text="", bg="lightblue", font=('calibre', 36, 'bold'))
 label3.pack_forget()
 
+label4 = tk.Label(root, text="Use A/D to move brackets, Left/Right to shift", bg="lightblue", font=('calibre', 20, 'bold'))
+label4.pack_forget()
+
 start_time = None
 
 def update_records_display():
     for i, lbl in enumerate(record_labels):
         if records[i] is not None:
-            lbl.config(text=f"{i+8}: {records[i]:.3f}s")
+            if records[i] <= gold_times[i]:
+                lbl.config(text=f"{i+8}: {records[i]:.3f}s", fg="#a18900")
+            elif records[i] <= gold_times[i] * 1.25:
+                lbl.config(text=f"{i+8}: {records[i]:.3f}s", fg="#888888")
+            elif records[i] <= gold_times[i] * 1.5:
+                lbl.config(text=f"{i+8}: {records[i]:.3f}s", fg="#cd7f32")
+            else:
+                lbl.config(text=f"{i+8}: {records[i]:.3f}s")
         else:
             lbl.config(text=f"{i+8}: -")
 
@@ -149,7 +161,8 @@ def start_game():
     global main_string, bracket_length, bracket_pos, start_time, chosen_number, button_pressed, game_won
     chosen_number = number_var.get()
     if chosen_number < 8 or chosen_number > 36:
-        label1.config(text="Select number from 8 to 36!", font=('calibre', 20, 'bold'))
+        label1.config(text="Select number from 8 to 36!", font=('calibre', 10, 'bold'), fg="red")
+        root.after(1000, lambda: label1.config(text='Select character number (8-36): ', font=('calibre', 10, 'bold'), fg="black"))
         return
 
     button_pressed = True
@@ -170,7 +183,18 @@ def start_game():
     label3.pack(pady=100)
     button1.pack()
     button2.pack()
-    records_frame.pack_forget()
+    label4.pack(pady=150)
+
+    records_frame.pack(side="left")
+    records_frame.place(x=0,y=0)
+    gold_label.config(text=f"Gold: {gold_times[chosen_number-8]:.3f}s", fg="#a18900")
+    gold_label.pack()
+    silver_label.config(text=f"Silver: {gold_times[chosen_number-8]*1.25:.3f}s", fg="#888888")
+    silver_label.pack()
+    bronze_label.config(text=f"Bronze: {gold_times[chosen_number-8]*1.5:.3f}s", fg="#cd7f32")
+    bronze_label.pack()
+    medals_frame.pack(side="right")
+    medals_frame.place(x=1750,y=0)
     button1.config(text="Reset", command=reset_game)
 
     root.bind("<Key>", key_pressed)
@@ -210,11 +234,15 @@ def go_to_menu():
     label2.pack()
     button.pack(pady=5)
     label3.pack_forget()
+    label4.pack_forget()
     button1.pack_forget()
     button2.pack_forget()
+    gold_label.pack_forget()
+    silver_label.pack_forget()
+    bronze_label.pack_forget()
     records_frame.pack(side="left")
+    records_frame.place(x=0,y=0)
     root.unbind("<Key>")
-    update_records_display()
 
 def key_pressed(event):
     global bracket_pos, bracket_length, main_string, chosen_number, game_won
@@ -252,7 +280,7 @@ def key_pressed(event):
         saved = save_encrypted_records(records_dict)
         if not saved:
             print("Warning: failed to save encrypted records.")
-        record_labels[idx+1].config(text=f"{chosen_number}: {records[idx]}s")
+        record_labels[idx].config(text=f"{chosen_number}: {records[idx]}s")
         label1.config(
             text=f"You win!\nTime: {czas}s\nCurrent best: {records[idx]}s",
             font=('calibre', 20, 'bold')
@@ -260,6 +288,7 @@ def key_pressed(event):
         root.unbind("<Key>")
         button2.pack()
         button1.config(text="Play again", command=restart_same_number)
+        update_records_display()
 
 button = tk.Button(root, text="Play!", command=start_game)
 button.pack(pady=5)
@@ -282,8 +311,15 @@ for i in range(8, 37):
     lbl.pack()
     record_labels.append(lbl)
 
-
 update_records_display()
+
+medals_frame = tk.Frame(root, bg="lightblue")
+medals_frame.place(x=1600,y=0)
+gold_label = tk.Label(medals_frame, text=f"Gold: --:--.---", bg="lightblue", font=('calibre', 14, 'normal'))
+silver_label = tk.Label(medals_frame, text=f"Silver: --:--.---", bg="lightblue", font=('calibre', 14, 'normal'))
+bronze_label = tk.Label(medals_frame, text=f"Bronze: --:--.---", bg="lightblue", font=('calibre', 14, 'normal'))
+medals_frame.pack_forget()
+
 
 def shiftByOne(text, direction):
     if not text:
